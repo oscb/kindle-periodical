@@ -49,11 +49,16 @@
         });
     }
 
-    function checkContent (content) {
+    async function checkContent (content, convertMarkdown = false) {
         content = content.toString();
 
         // convert markdown
-        content = converter.makeHtml(content);
+        if (convertMarkdown) {
+            content = converter.makeHtml(content);
+        }
+
+        // Save Images
+        content = await extractImages(content);
 
         // remove not supported tags
         content = sanitizeHtml(content, {
@@ -95,25 +100,37 @@
                     // add a utf8 header
                     dom.window.document.head.insertAdjacentHTML('beforeend', '<meta charset="utf-8">');
 
-                    // download images
-                    let imgs = dom.window.document.querySelectorAll('img');
-                    for (let img of imgs) {
-                        let extension = path.extname(img.src);
-                        let baseName = path.basename(img.src, extension);
-                        let cleanedBaseName = baseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                        let cleanedFileName = cleanedBaseName + extension;
-
-                        console.log(`--> download image from: ${img.src}, rename to ${cleanedFileName}`);
-                        await download(img.src).pipe(fs.createWriteStream(path.join(process.cwd(), 'book', cleanedFileName)));
-
-                        img.src = cleanedFileName;
-                    }
-
                     resolve(dom.serialize());
                     article.close();
                 }
             });
         });
+    }
+
+    async function extractImages(content) {
+        const dom = new JSDOM(content);
+
+        // Images
+        let imgs = dom.window.document.querySelectorAll('img');
+        for (let img of imgs) {
+            let extension = path.extname(img.src);
+            let baseName = path.basename(img.src, extension);
+            let cleanedBaseName = baseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            let cleanedFileName = cleanedBaseName + extension;
+
+            console.log(`--> download image from: ${img.src}, rename to ${cleanedFileName}`);
+            await download(img.src).pipe(fs.createWriteStream(path.join(process.cwd(), 'book', cleanedFileName)));
+            
+            // Handle HTML5 <picture>
+            if (img.parentElement != null && img.parentElement.tagName.toLowerCase() === 'picture') {
+                let temp = img.parentElement;
+                console.log(temp);
+                temp.insertAdjacentElement('afterend', img);
+            }
+            img.src = cleanedFileName;
+        }
+
+        return dom.serialize();
     }
 
     function createFolder (fileFolder) {
@@ -206,7 +223,12 @@
             }
 
             console.log(`-> create article (HTML) with Name ${fileName}`);
-            await writeToBookFolder(fileName, `<body>${checkContent(content)}</body>`);
+            const bom = '\ufeff';
+            await createFolder(bookFolderPath);
+
+            const cleanContent = await checkContent(content, article.convertMarkdown);
+
+            await writeToBookFolder(fileName,  `${bom}${cleanContent}`);
 
             return fileName;
         } catch (err) {
