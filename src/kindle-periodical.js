@@ -113,19 +113,28 @@
         // Images
         let imgs = dom.window.document.querySelectorAll('img');
         for (let img of imgs) {
-            let extension = path.extname(img.src);
-            let baseName = path.basename(img.src, extension);
-            let cleanedBaseName = baseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            let cleanedFileName = cleanedBaseName + extension;
+            let extension, baseName, cleanedBaseName, cleanedFileName;
+            if (img.src != null && img.src.trim() !== '') {
+                extension = path.extname(img.src);
+                baseName = path.basename(img.src, extension);
+                cleanedBaseName = baseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                cleanedFileName = cleanedBaseName + extension;
+                console.log(`--> download image from: ${img.src}, rename to ${cleanedFileName}`);
+                await download(img.src).pipe(fs.createWriteStream(path.join(process.cwd(), 'book', cleanedFileName)));
+            } else if (img.srcset !== null && img.srcset.toLowerCase() !== 'null') {
+                let srcset = img.srcset.split(',')[0].split(' ')[0];
+                extension = path.extname(srcset);
+                baseName = path.basename(srcset, extension);
+                cleanedBaseName = baseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                cleanedFileName = cleanedBaseName + extension;
+                console.log(`--> download image from: ${srcset}, rename to ${cleanedFileName}`);
+                await download(srcset).pipe(fs.createWriteStream(path.join(process.cwd(), 'book', cleanedFileName)));
+            }
 
-            console.log(`--> download image from: ${img.src}, rename to ${cleanedFileName}`);
-            await download(img.src).pipe(fs.createWriteStream(path.join(process.cwd(), 'book', cleanedFileName)));
-            
             // Handle HTML5 <picture>
             if (img.parentElement != null && img.parentElement.tagName.toLowerCase() === 'picture') {
                 let temp = img.parentElement;
-                console.log(temp);
-                temp.insertAdjacentElement('afterend', img);
+                temp.parentElement.insertBefore(img, temp);
             }
             img.src = cleanedFileName;
         }
