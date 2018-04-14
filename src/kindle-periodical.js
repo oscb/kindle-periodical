@@ -82,6 +82,7 @@
         });
 
         content = content.replace(/data-src/g, 'src');
+        content = content.replace(/<source>/g, '<source/>');
         content = content.replace(/<img>/g, '');
 
         return content;
