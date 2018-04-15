@@ -9,6 +9,8 @@
     const readFile = promisify(fs.readFile);
     const fileStat = promisify(fs.stat);
     const mkdir = promisify(fs.mkdir);
+    const unlink = promisify(fs.unlink);
+    const stat = promisify(fs.stat);
     const _ = require('underscore');
     const jsdom = require('jsdom');
     const { JSDOM } = jsdom;
@@ -21,6 +23,7 @@
     const showdown = require('showdown');
     const converter = new showdown.Converter();
 
+    const maxImageSizeMb = 5;
     const bookFolderPath = path.join(process.cwd(), 'book');
     const mobiSupportedTags = [
         'a', 'address', 'article', 'aside', 'b', 'blockquote', 'body', 'br',
@@ -35,6 +38,7 @@
         'title', 'tr', 'u', 'ul', 'var', 'wbr', 'nav', 'summary', 'details',
         'meta'
     ];
+
 
     function pad (value) {
         return (`00000${value}`).slice(-5);
@@ -110,7 +114,6 @@
 
     async function extractImages(content) {
         const dom = new JSDOM(content);
-        let allDownloads = [];
         // Images
         let imgs = dom.window.document.querySelectorAll('img');
         for (let img of imgs) {
@@ -132,27 +135,23 @@
             cleanedFileName = cleanedBaseName + extension;
             console.log(`--> download image from: ${src}, rename to ${cleanedFileName}`);
 
+            let imagePath = path.join(process.cwd(), 'book', cleanedFileName);
+            await download(src, path.dirname(imagePath), { filename: cleanedFileName });
+            let fstat = await stat(imagePath);
+            // Limit image sizes since kindlegen might complain
+            if (fstat.size / Math.pow(1024.0,2) > maxImageSizeMb) {
+                img.remove();
+                await unlink(imagePath);
+            }
+
             // Handle HTML5 <picture>
             if (img.parentElement != null && img.parentElement.tagName.toLowerCase() === 'picture') {
                 let temp = img.parentElement;
                 temp.parentElement.insertBefore(img, temp);
             }
             img.src = cleanedFileName;
-            allDownloads.push(new Promise((resolve, reject) => {
-                let downloadedFile = download(src);
-                downloadedFile.pipe(fs.createWriteStream(path.join(process.cwd(), 'book', cleanedFileName)));
-                downloadedFile.on('end', () => {
-                    console.log(`--> picture downloaded`);
-                    resolve();
-                });
-                downloadedFile.on('error', () => {
-                    console.log(`--> picture error`);
-                    reject();
-                });
-            }));
         }
 
-        await allDownloads;
         return dom.serialize();
     }
 
