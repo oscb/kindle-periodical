@@ -123,6 +123,7 @@
             if (!src.match(/\.(jpe?g|png|gif|bmp)$/i)) {
                 img.remove();
                 continue;
+                // TODO: Can I figure out the type somehow?
             }
 
             extension = path.extname(src);
@@ -213,8 +214,18 @@
 
     async function copyFile (sourceFilePath, targetFolder) {
         await createFolder(path.dirname(targetFolder));
-        await fs.createReadStream(sourceFilePath)
-            .pipe(fs.createWriteStream(targetFolder));
+        return new Promise((resolve, reject) => {
+            let reader = fs.createReadStream(sourceFilePath);
+            reader.pipe(fs.createWriteStream(targetFolder));
+            reader.on('end', () => {
+                console.log(`--> .mobi file copied`);
+                resolve();
+            });
+            reader.on('error', () => {
+                console.log(`--> .mobi file copied`);
+                reject();
+            });
+        });
     }
 
     async function createArticleHTMLFiles (article, articleNumber, sectionNumber) {
