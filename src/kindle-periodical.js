@@ -213,7 +213,7 @@
 
     async function copyFile (sourceFilePath, targetFolder) {
         await createFolder(path.dirname(targetFolder));
-        fs.createReadStream(sourceFilePath)
+        await fs.createReadStream(sourceFilePath)
             .pipe(fs.createWriteStream(targetFolder));
     }
 
