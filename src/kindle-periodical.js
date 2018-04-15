@@ -110,7 +110,7 @@
 
     async function extractImages(content) {
         const dom = new JSDOM(content);
-
+        let allDownloads = [];
         // Images
         let imgs = dom.window.document.querySelectorAll('img');
         for (let img of imgs) {
@@ -131,7 +131,6 @@
             cleanedBaseName = baseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
             cleanedFileName = cleanedBaseName + extension;
             console.log(`--> download image from: ${src}, rename to ${cleanedFileName}`);
-            await download(src).pipe(fs.createWriteStream(path.join(process.cwd(), 'book', cleanedFileName)));
 
             // Handle HTML5 <picture>
             if (img.parentElement != null && img.parentElement.tagName.toLowerCase() === 'picture') {
@@ -139,8 +138,21 @@
                 temp.parentElement.insertBefore(img, temp);
             }
             img.src = cleanedFileName;
+            allDownloads.push(new Promise((resolve, reject) => {
+                let downloadedFile = download(src);
+                downloadedFile.pipe(fs.createWriteStream(path.join(process.cwd(), 'book', cleanedFileName)));
+                downloadedFile.on('end', () => {
+                    console.log(`--> picture downloaded`);
+                    resolve();
+                });
+                downloadedFile.on('error', () => {
+                    console.log(`--> picture error`);
+                    reject();
+                });
+            }));
         }
 
+        await allDownloads;
         return dom.serialize();
     }
 
@@ -222,7 +234,7 @@
                 resolve();
             });
             reader.on('error', () => {
-                console.log(`--> .mobi file copied`);
+                console.log(`--> .mobi file error`);
                 reject();
             });
         });
