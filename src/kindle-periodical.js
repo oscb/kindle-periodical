@@ -114,23 +114,23 @@
         // Images
         let imgs = dom.window.document.querySelectorAll('img');
         for (let img of imgs) {
-            let extension, baseName, cleanedBaseName, cleanedFileName;
+            let extension, baseName, cleanedBaseName, cleanedFileName, src;
             if (img.src != null && img.src.trim() !== '') {
-                extension = path.extname(img.src);
-                baseName = path.basename(img.src, extension);
-                cleanedBaseName = baseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                cleanedFileName = cleanedBaseName + extension;
-                console.log(`--> download image from: ${img.src}, rename to ${cleanedFileName}`);
-                await download(img.src).pipe(fs.createWriteStream(path.join(process.cwd(), 'book', cleanedFileName)));
+                src = img.src;
             } else if (img.srcset !== null && img.srcset.toLowerCase() !== 'null') {
-                let srcset = img.srcset.split(',')[0].split(' ')[0];
-                extension = path.extname(srcset);
-                baseName = path.basename(srcset, extension);
-                cleanedBaseName = baseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                cleanedFileName = cleanedBaseName + extension;
-                console.log(`--> download image from: ${srcset}, rename to ${cleanedFileName}`);
-                await download(srcset).pipe(fs.createWriteStream(path.join(process.cwd(), 'book', cleanedFileName)));
+                src = img.srcset.split(',')[0].split(' ')[0];
             }
+            if (!src.match(/\.(jpe?g|png|gif|bmp)$/i)) {
+                img.remove();
+                continue;
+            }
+
+            extension = path.extname(src);
+            baseName = path.basename(src, extension);
+            cleanedBaseName = baseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            cleanedFileName = cleanedBaseName + extension;
+            console.log(`--> download image from: ${src}, rename to ${cleanedFileName}`);
+            await download(src).pipe(fs.createWriteStream(path.join(process.cwd(), 'book', cleanedFileName)));
 
             // Handle HTML5 <picture>
             if (img.parentElement != null && img.parentElement.tagName.toLowerCase() === 'picture') {
