@@ -123,7 +123,7 @@
             } else if (img.srcset !== null && img.srcset.toLowerCase() !== 'null') {
                 src = img.srcset.split(',')[0].split(' ')[0];
             }
-            if (!src.match(/\.(jpe?g|png|gif|bmp)$/i)) {
+            if (!src || !src.match(/\.(jpe?g|png|gif|bmp)$/i)) {
                 img.remove();
                 continue;
                 // TODO: Can I figure out the type somehow?
