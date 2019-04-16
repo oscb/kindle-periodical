@@ -69,7 +69,9 @@
             allowedAttributes: {
                 meta: [ 'charset' ],
                 a   : [ 'href', 'name', 'target' ],
-                img : [ 'src' ]
+                img : [ 'src' ],
+                p: [ 'style', 'class' ],
+                '*':  [ 'style', 'class' ],
             }
         });
 
@@ -247,7 +249,6 @@
             console.log(`-> create article (HTML) with Name ${fileName}`);
             const bom = '\ufeff';
             await createFolder(bookFolderPath);
-
             const cleanContent = await checkContent(content, bookFolderPath, article.convertMarkdown);
 
             await writeToBookFolder(fileName, `${bom}${cleanContent}`, bookFolderPath);
