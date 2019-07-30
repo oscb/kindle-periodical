@@ -118,39 +118,44 @@
         // Images
         let imgs = dom.window.document.querySelectorAll('img');
         for (let img of imgs) {
-            let extension, baseName, cleanedBaseName, cleanedFileName, src;
-            if (img.src != null && img.src.trim() !== '') {
-                src = img.src;
-            } else if (img.srcset !== null && img.srcset.toLowerCase() !== 'null') {
-                src = img.srcset.split(',')[0].split(' ')[0];
-            }
-            if (!src || !src.match(/\.(jpe?g|png|gif|bmp)$/i)) {
+            try {
+                let extension, baseName, cleanedBaseName, cleanedFileName, src;
+                if (img.src != null && img.src.trim() !== '') {
+                    src = img.src;
+                } else if (img.srcset !== null && img.srcset.toLowerCase() !== 'null') {
+                    src = img.srcset.split(',')[0].split(' ')[0];
+                }
+                if (!src || !src.match(/\.(jpe?g|png|gif|bmp)$/i)) {
+                    img.remove();
+                    continue;
+                    // TODO: Can I figure out the type somehow?
+                }
+    
+                extension = path.extname(src);
+                baseName = path.basename(src, extension);
+                cleanedBaseName = baseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                cleanedFileName = cleanedBaseName + extension;
+                console.log(`--> download image from: ${src}, rename to ${cleanedFileName}`);
+    
+                let imagePath = path.join(bookFolderPath, cleanedFileName);
+                await download(src, path.dirname(imagePath), { filename: cleanedFileName });
+                let fstat = await stat(imagePath);
+                // Limit image sizes since kindlegen might complain
+                if (fstat.size / Math.pow(1024.0,2) > maxImageSizeMb) {
+                    img.remove();
+                    await unlink(imagePath);
+                }
+    
+                // Handle HTML5 <picture>
+                if (img.parentElement != null && img.parentElement.tagName.toLowerCase() === 'picture') {
+                    let temp = img.parentElement;
+                    temp.parentElement.insertBefore(img, temp);
+                }
+                img.src = cleanedFileName;
+            } catch (e) {
+                console.error(`Failed to download image: ${e}`);
                 img.remove();
-                continue;
-                // TODO: Can I figure out the type somehow?
             }
-
-            extension = path.extname(src);
-            baseName = path.basename(src, extension);
-            cleanedBaseName = baseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            cleanedFileName = cleanedBaseName + extension;
-            console.log(`--> download image from: ${src}, rename to ${cleanedFileName}`);
-
-            let imagePath = path.join(bookFolderPath, cleanedFileName);
-            await download(src, path.dirname(imagePath), { filename: cleanedFileName });
-            let fstat = await stat(imagePath);
-            // Limit image sizes since kindlegen might complain
-            if (fstat.size / Math.pow(1024.0,2) > maxImageSizeMb) {
-                img.remove();
-                await unlink(imagePath);
-            }
-
-            // Handle HTML5 <picture>
-            if (img.parentElement != null && img.parentElement.tagName.toLowerCase() === 'picture') {
-                let temp = img.parentElement;
-                temp.parentElement.insertBefore(img, temp);
-            }
-            img.src = cleanedFileName;
         }
 
         return dom.serialize();
@@ -231,7 +236,7 @@
         });
     }
 
-    async function createArticleHTMLFiles (article, articleNumber, sectionNumber, bookFolderPath) {
+async function createArticleHTMLFiles (article, articleNumber, sectionNumber, bookFolderPath) {
         try {
             assert.ok(typeof sectionNumber === 'number', 'sectionNumber is no number');
             assert.ok(typeof articleNumber === 'number', 'articleNumber is no number');
@@ -447,7 +452,7 @@
             return true;
         } catch (err) {
             console.log('fail to create .mobi');
-            throw Error(err);
+            throw err;
         }
     };
 })();
