@@ -280,10 +280,10 @@ async function createArticleHTMLFiles (article, articleNumber, sectionNumber, bo
             let articles = [];
             await Promise.all(currentSection.articles.map(async (article, articleIndex) => {
                 let createdFileName = await createArticleHTMLFiles(article, articleIndex, parseInt(sectionIndex, 10), bookFolderPath);
-                articles.push($article({
+                articles[articleIndex] = $article({
                     file : createdFileName,
                     title: article.title
-                }));
+                });
             }));
 
             sections.push($section({
