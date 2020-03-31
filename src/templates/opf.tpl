@@ -16,6 +16,8 @@
                 <output content-type="application/x-mobipocket-subscription-magazine" encoding="utf-8"/>
                 <EmbeddedCover><%= cover %></EmbeddedCover>
             </x-metadata>
+
+            <meta name="cover" content="<%= cover %>" />
         </metadata> 
 
         <manifest>
